@@ -3,11 +3,14 @@
 #include <stddef.h>
 
 big_integer::big_integer(const big_integer &other) {
+	// TODO: prefer using initializer list
 	box = other.box;
 	box->cnt++;
 }
 
 big_integer::big_integer(ui64 a) {
+	// TODO: this function is not exception safe
+	// TODO: prefer using initializer list
 	box = new copy_on_write();
 	box->v.push_back(a);
 	box->v.push_back(0);
@@ -15,6 +18,8 @@ big_integer::big_integer(ui64 a) {
 }
 
 big_integer::big_integer(int a) {
+	// TODO: this function is not exception safe
+	// TOOD: abs(INT_MIN) is undefined behavior
 	bool is_negative = (a < 0);
 	a = abs(a);
 	box = new copy_on_write();
@@ -42,6 +47,7 @@ big_integer::big_integer(const std::string &s) {
 		a.pop_back();
 	}
 	if (a.empty()) {
+		// TODO: this function is not exception safe
 		box = new copy_on_write();
 		box->v.push_back(0);
 		box->v.push_back(0);
@@ -76,6 +82,7 @@ big_integer::big_integer(const std::string &s) {
 }
 
 void big_integer::make_new() {
+	// TODO: this function is not exception safe
 	big_integer t = *this;
 	this->delete_copy();
 	this->box = new copy_on_write();
@@ -107,6 +114,7 @@ big_integer& big_integer::operator*=(big_integer const &rhs) {
 }
 
 std::pair<big_integer, big_integer> divmod(big_integer const& a, big_integer const& b) {
+	// pass parameters but value, don't make copy inside
 	big_integer a1(a), b1(b);
 	big_integer res_div, res_mod;
 	Vector vec_div;
@@ -161,6 +169,7 @@ std::pair<big_integer, big_integer> divmod(big_integer const& a, big_integer con
 }
 
 big_integer& big_integer::operator/=(int rhs) {
+	// TODO: abs(INT_MIN) is undefined behavior
 	bool res_sign = (rhs < 0) ^ bool(box->v.back() & 1);
 	ui64 urhs = std::abs(rhs), rem = 0;
 	*this = abs(*this);
@@ -397,7 +406,7 @@ big_integer operator<<(big_integer const &a, int b) {
 		aa.box->v.push_back(0);
 	}
 	aa.box->v.reverse();
-	
+
 	aa *= slow_shift;
 
 	return aa;
