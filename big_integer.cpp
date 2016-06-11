@@ -14,11 +14,6 @@ big_integer::big_integer(ui64 a) {
 	    box = new copy_on_write();
     try {
         box->v.push_back(a);
-    } catch (...) {
-        delete(box);
-        throw;
-    }
-    try {
         box->v.push_back(0);
     } catch (...) {
         delete(box);
@@ -35,16 +30,12 @@ big_integer::big_integer(int a) {
 	box = new copy_on_write();
 	try {
         box->v.push_back(aa);
-    } catch (...) {
-        delete(box);
-        throw;
-    }
-	try {
         box->v.push_back(0);
     } catch (...) {
         delete(box);
         throw;
     }
+
 	box->cnt = 1;
 
     if (is_negative) {
@@ -72,11 +63,6 @@ big_integer::big_integer(const std::string &s) {
             box = new copy_on_write();
         try {
             box->v.push_back(0);
-        } catch (...) {
-            delete(box);
-            throw;
-        }
-        try {
             box->v.push_back(0);
         } catch (...) {
             delete(box);
@@ -129,12 +115,8 @@ void big_integer::make_new() {
 	// TODO: this function is not exception safe
 	big_integer t = *this;
 	this->delete_copy();
-    try {
         this->box = new copy_on_write();
-    } catch (...) {
-        delete(box);
-        throw;
-    }
+
     this->box->cnt = 1;
 	this->box->v = t.box->v;
 }
