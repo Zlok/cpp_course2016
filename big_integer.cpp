@@ -41,36 +41,25 @@ big_integer::big_integer(const int& num) {
 }
 
 big_integer::big_integer(string s) {
-	big_integer pow(1);
-    sign = false;
-    size_t st = 0;
-    if (s[0] == '-') {
-        sign = true;
-        st++;
-    }
-	big_integer ten(10);
-    for (int i = 0; i < 9; i++) {
-        pow *= ten;
-    }
 
-    int tmp = 0, len = 0;
-    while (len + 9 <= s.size()) {
-        for (int i = 0; i < 9; i++) {
-            tmp = tmp * 10 + (s[len + i] - '0');
+    big_integer();
+    if (!s.empty()) {
+        size_t pos = 0;
+        unsigned sign_rhs = 0;
+        if (s[pos] == '-') {
+            ++pos;
+            sign_rhs = ~sign_rhs;
         }
-	    *this = (*this * pow) + tmp;
+        if (pos != s.length()) {
+            for (; pos < s.length(); ++pos) {
+                *this = (*this * 10) + (s[pos] - '0');
+            }
+            if ((sign_rhs) && (*this != 0)) {
+                sign = sign_rhs;
+                bag();
+            }
+        }
     }
-
-    pow = 1;
-    for (int i = 0; i < s.size() - len; i++) {
-        pow *= ten;
-    }
-
-    for (int i = 0; i < s.size() - len; i++) {
-        tmp = tmp * 10 + (s[len + i] - '0');
-    }
-    *this = *this * pow + tmp;
-    bag();
 }
 
 big_integer& big_integer::operator=(const big_integer& right) {

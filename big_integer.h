@@ -35,7 +35,6 @@ public:
 		for (int i = size - 1; i >= 0; i--)
 			number[i] = NULL;
         delete(number);
-		cout << size << " !" << endl;
 	}
 	int toInt()const;
 
