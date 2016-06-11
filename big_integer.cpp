@@ -1,6 +1,7 @@
 #include "big_integer.h"
 #include <sstream>
 #include <stddef.h>
+#include <iostream>
 
 big_integer::big_integer(const big_integer &other) : box(other.box) {
 	// TODO: prefer using initializer list
@@ -10,20 +11,18 @@ big_integer::big_integer(const big_integer &other) : box(other.box) {
 big_integer::big_integer(ui64 a) {
 	// TODO: this function is not exception safe
 	// TODO: prefer using initializer list
-	try {
-        box = new copy_on_write();
-    } catch (...) {
-        delete(box);
-    }
-	try {
+	    box = new copy_on_write();
+    try {
         box->v.push_back(a);
     } catch (...) {
         delete(box);
+        throw;
     }
     try {
         box->v.push_back(0);
     } catch (...) {
         delete(box);
+        throw;
     }
 	box->cnt = 1;
 }
@@ -32,12 +31,23 @@ big_integer::big_integer(int a) {
 	// TODO: this function is not exception safe
 	// TOOD: abs(INT_MIN) is undefined behavior
 	bool is_negative = (a < 0);
-	*this = abs((long long)a);
-//	box = new copy_on_write();
-//	box->v.push_back(a);
-//	box->v.push_back(0);
-//	box->cnt = 1;
-	if (is_negative) {
+	ui64 aa = (ui64)abs((long long)a);
+	box = new copy_on_write();
+	try {
+        box->v.push_back(aa);
+    } catch (...) {
+        delete(box);
+        throw;
+    }
+	try {
+        box->v.push_back(0);
+    } catch (...) {
+        delete(box);
+        throw;
+    }
+	box->cnt = 1;
+
+    if (is_negative) {
 		*this = -(*this);
 	}
 }
@@ -59,20 +69,18 @@ big_integer::big_integer(const std::string &s) {
 	}
 	if (a.empty()) {
 		// TODO: this function is not exception safe
-        try {
             box = new copy_on_write();
+        try {
+            box->v.push_back(0);
         } catch (...) {
             delete(box);
+            throw;
         }
         try {
             box->v.push_back(0);
         } catch (...) {
             delete(box);
-        }
-        try {
-            box->v.push_back(0);
-        } catch (...) {
-            delete(box);
+            throw;
         }
 		box->cnt = 1;
 		return;
@@ -88,7 +96,14 @@ big_integer::big_integer(const std::string &s) {
 			rem = (ui64) (cur % base);
 		}
 
-		box->v.push_back(rem);
+
+		try {
+            box->v.push_back(rem);
+        } catch (...) {
+            delete(box);
+            throw;
+        }
+
 		while (!a.empty() && !a.back()) {
 			a.pop_back();
 		}
@@ -97,7 +112,13 @@ big_integer::big_integer(const std::string &s) {
 	while (box->v.size() > 1 && !box->v.back()) {
 		box->v.pop_back();
 	}
-	box->v.push_back(0);
+    try {
+        box->v.push_back(0);
+    } catch (...) {
+        delete(box);
+        throw;
+    }
+
 	box->cnt = 1;
 	if (s[0] == '-') {
 		*this = -(*this);
@@ -112,6 +133,7 @@ void big_integer::make_new() {
         this->box = new copy_on_write();
     } catch (...) {
         delete(box);
+        throw;
     }
     this->box->cnt = 1;
 	this->box->v = t.box->v;
@@ -166,10 +188,10 @@ std::pair<big_integer, big_integer> divmod(big_integer a, big_integer b) {
 					r = m;
 				}
 			}
-			vec_div.push_back(l);
-			a -= b * l;
+			    vec_div.push_back(l);
+            a -= b * l;
 		} else {
-			vec_div.push_back(0);
+            vec_div.push_back(0);
 		}
 		b >>= 32;
 	}
@@ -182,7 +204,7 @@ std::pair<big_integer, big_integer> divmod(big_integer a, big_integer b) {
 	if (vec_div.empty()) {
 		res_div = 0;
 	} else  {
-		vec_div.push_back(0);
+        vec_div.push_back(0);
 		res_div.box->v = vec_div;
 		if (res_sign) {
 			res_div = -res_div;
@@ -211,7 +233,6 @@ big_integer& big_integer::operator/=(int rhs) {
 	trim(*this);
 	if (res_sign) *this = -(*this);
 	return *this;
-
 }
 
 big_integer& big_integer::operator/=(big_integer const &rhs) {
@@ -278,7 +299,7 @@ big_integer big_integer::operator-() const {
 
 void trim(big_integer &a) {
 	while (a.box->v.size() > 2 && (a.box->v[a.box->v.size() - 1] == a.box->v[a.box->v.size() - 2])) {
-		a.box->v.pop_back();
+            a.box->v.pop_back();
 	}
 }
 
@@ -427,7 +448,7 @@ big_integer operator<<(big_integer const &a, int b) {
 	
 	aa.make_new();
 
-	int quick_shift = b >> 5, slow_shift = 1 << (b & 31);
+	ui64 quick_shift = ui64((long long)b >> 5), slow_shift = 1U << ui64(((long long)b) & 31);
 	aa.box->v.reverse();
 	for (int i = 0; i < quick_shift; ++i) {
 		aa.box->v.push_back(0);
@@ -440,7 +461,7 @@ big_integer operator<<(big_integer const &a, int b) {
 }
 
 big_integer operator>>(big_integer const &a, int b) {
-	big_integer aa = a;
+    big_integer aa = a;
 	if (aa == 0 || b == 0) {
 		return aa;
 	}
@@ -449,16 +470,19 @@ big_integer operator>>(big_integer const &a, int b) {
 		return aa;
 	}
 	aa.make_new();
-	int quick_shift = b >> 5, slow_shift = 1 << (b & 31);
-	aa.box->v.reverse();
+
+	ui64 quick_shift = ui64(b >> 5), slow_shift = 1UL << (b & 31);
+    aa.box->v.reverse();
 	for (int i = 0; i < quick_shift; ++i) {
 		aa.box->v.pop_back();
 	}
-	aa.box->v.reverse();
+    aa.box->v.reverse();
 
 	aa /= slow_shift;
     if (a.box->v.back())
         aa -= 1;
+    else if (b == 31)
+        aa = -aa;
     return aa;
 }
 
@@ -571,7 +595,6 @@ std::string to_string(big_integer const &a) {
 			}
 		}
 		sum = trim_to_base(sum, local_base);
-		
 	}
 	
 	std::stringstream ss;
