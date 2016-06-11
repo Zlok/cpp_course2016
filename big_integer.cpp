@@ -2,18 +2,29 @@
 #include <sstream>
 #include <stddef.h>
 
-big_integer::big_integer(const big_integer &other) {
+big_integer::big_integer(const big_integer &other) : box(other.box) {
 	// TODO: prefer using initializer list
-	box = other.box;
 	box->cnt++;
 }
 
 big_integer::big_integer(ui64 a) {
 	// TODO: this function is not exception safe
 	// TODO: prefer using initializer list
-	box = new copy_on_write();
-	box->v.push_back(a);
-	box->v.push_back(0);
+	try {
+        box = new copy_on_write();
+    } catch (...) {
+        delete(box);
+    }
+	try {
+        box->v.push_back(a);
+    } catch (...) {
+        delete(box);
+    }
+    try {
+        box->v.push_back(0);
+    } catch (...) {
+        delete(box);
+    }
 	box->cnt = 1;
 }
 
@@ -21,11 +32,11 @@ big_integer::big_integer(int a) {
 	// TODO: this function is not exception safe
 	// TOOD: abs(INT_MIN) is undefined behavior
 	bool is_negative = (a < 0);
-	a = abs(a);
-	box = new copy_on_write();
-	box->v.push_back(a);
-	box->v.push_back(0);
-	box->cnt = 1;
+	*this = abs((long long)a);
+//	box = new copy_on_write();
+//	box->v.push_back(a);
+//	box->v.push_back(0);
+//	box->cnt = 1;
 	if (is_negative) {
 		*this = -(*this);
 	}
@@ -48,9 +59,21 @@ big_integer::big_integer(const std::string &s) {
 	}
 	if (a.empty()) {
 		// TODO: this function is not exception safe
-		box = new copy_on_write();
-		box->v.push_back(0);
-		box->v.push_back(0);
+        try {
+            box = new copy_on_write();
+        } catch (...) {
+            delete(box);
+        }
+        try {
+            box->v.push_back(0);
+        } catch (...) {
+            delete(box);
+        }
+        try {
+            box->v.push_back(0);
+        } catch (...) {
+            delete(box);
+        }
 		box->cnt = 1;
 		return;
 	}
@@ -85,8 +108,12 @@ void big_integer::make_new() {
 	// TODO: this function is not exception safe
 	big_integer t = *this;
 	this->delete_copy();
-	this->box = new copy_on_write();
-	this->box->cnt = 1;
+    try {
+        this->box = new copy_on_write();
+    } catch (...) {
+        delete(box);
+    }
+    this->box->cnt = 1;
 	this->box->v = t.box->v;
 }
 
@@ -113,41 +140,41 @@ big_integer& big_integer::operator*=(big_integer const &rhs) {
 	return (*this = (*this) * rhs);
 }
 
-std::pair<big_integer, big_integer> divmod(big_integer const& a, big_integer const& b) {
+std::pair<big_integer, big_integer> divmod(big_integer a, big_integer b) {
 	// pass parameters but value, don't make copy inside
-	big_integer a1(a), b1(b);
+	//big_integer a1(a), b1(b);
 	big_integer res_div, res_mod;
 	Vector vec_div;
 
-	ui64 res_sign = (a1.box->v.back() ^ b1.box->v.back());
-	ui64 y = b1.box->v.back();
-	a1 = abs(a1);
-	b1 = abs(b1);
+	ui64 res_sign = (a.box->v.back() ^ b.box->v.back());
+	ui64 y = b.box->v.back();
+	a = abs(a);
+	b = abs(b);
 
-	int col = a1.box->v.size() - b1.box->v.size();
+	int col = a.box->v.size() - b.box->v.size();
 	if (col > 0) {
-		b1 <<= col * 32;
+		b <<= col * 32;
 	}
 	for (int i = 0; i <= col; ++i) {
-		if (b1 <= a1) {
+		if (b <= a) {
 			ui64 l = 0, r = big_integer::base;
 			while (r - l > 1) {
 				ui64 m = (l + r) >> 1;
-				if (b1 * m <= a1) {
+				if (b * m <= a) {
 					l = m;
 				} else {
 					r = m;
 				}
 			}
 			vec_div.push_back(l);
-			a1 -= b1 * l;
+			a -= b * l;
 		} else {
 			vec_div.push_back(0);
 		}
-		b1 >>= 32;
+		b >>= 32;
 	}
 	vec_div.reverse();
-	res_mod = a1;
+	res_mod = a;
 
 	while (vec_div.size() > 1 && !vec_div.back()) {
 		vec_div.pop_back();
@@ -171,7 +198,7 @@ std::pair<big_integer, big_integer> divmod(big_integer const& a, big_integer con
 big_integer& big_integer::operator/=(int rhs) {
 	// TODO: abs(INT_MIN) is undefined behavior
 	bool res_sign = (rhs < 0) ^ bool(box->v.back() & 1);
-	ui64 urhs = std::abs(rhs), rem = 0;
+	ui64 urhs = std::abs((long long)rhs), rem = 0;
 	*this = abs(*this);
 
 	for (size_t i = this->box->v.size() - 1; i != 0; --i) {

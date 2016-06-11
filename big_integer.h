@@ -38,7 +38,7 @@ struct big_integer {
     big_integer& operator+=(big_integer const &rhs);
     big_integer& operator-=(big_integer const &rhs);
     big_integer& operator*=(big_integer const &rhs);
-    friend std::pair<big_integer, big_integer> divmod(big_integer const &a, big_integer const &b);
+    friend std::pair<big_integer, big_integer> divmod(big_integer a, big_integer b);
     big_integer& operator/=(int rhs);
     big_integer& operator/=(big_integer const &rhs);
     big_integer& operator%=(big_integer const &rhs);
