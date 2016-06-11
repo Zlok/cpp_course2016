@@ -16,7 +16,7 @@ big_integer::big_integer(const big_integer &right) {
     size = right.size;
     sign = right.sign;
 	number = new bool[size];
-    for (int i = 0; i < size; i++)
+    for (unsigned i = 0; i < size; i++)
         number[i] = right.number[i];
     bag();
 }
@@ -41,8 +41,19 @@ big_integer::big_integer(const int& num) {
 }
 
 big_integer::big_integer(string s) {
+    const int base_digits = 9;
+    unsigned pos = (s[0] == '-' || s[0] == '+') ? 1 : 0;
+    for (unsigned i = s.size() - 1; i >= pos; i -= 9) {
+        unsigned x = 0;
+        for (int j = std::max(pos, i - base_digits + 1); j <= i; j++)
+            x = x * 10 + s[j] - '0';
+        *this += x;
+    }
 
-    big_integer();
+    if (s[0] == '-') {
+        sign = true;
+    }
+/*    big_integer();
     if (!s.empty()) {
         size_t pos = 0;
         unsigned sign_rhs = 0;
@@ -59,7 +70,8 @@ big_integer::big_integer(string s) {
                 bag();
             }
         }
-    }
+    }*/
+    bag();
 }
 
 big_integer& big_integer::operator=(const big_integer& right) {
@@ -67,7 +79,7 @@ big_integer& big_integer::operator=(const big_integer& right) {
         return *this;
     size = right.size;
     sign = right.sign;
-    for (int i = 0; i < size; i++) {
+    for (unsigned i = 0; i < size; i++) {
         number[i] = right.number[i];
     }
     bag();
@@ -77,7 +89,7 @@ big_integer& big_integer::operator=(const big_integer& right) {
 bool operator==(const big_integer& left, const big_integer& right) {
     if (left.sign != right.sign || left.size != right.size)
         return false;
-    for (int i = 0; i < left.size; i++) {
+    for (unsigned i = 0; i < left.size; i++) {
         if (left.number[i] != right.number[i])
             return false;
     }
@@ -95,20 +107,20 @@ bool operator<(const big_integer& left, const big_integer& right) {
         return false;
     if (left.sign) {
         if (left.size == right.size) {
-            for (int i = left.size - 1; i >= 0; i--)
-                if (left.number[i] > right.number[i])
+            for (unsigned i = left.size; i > 0; i--)
+                if (left.number[i - 1] > right.number[i - 1])
                     return true;
-                else if (left.number[i] < right.number[i])
+                else if (left.number[i - 1] < right.number[i - 1])
                     return false;
             return false;
         } else
             return left.size > right.size;
     } else {
         if (left.size == right.size) {
-            for (int i = left.size - 1; i >= 0; i--)
-                if (left.number[i] < right.number[i])
+            for (unsigned i = left.size; i > 0; i--)
+                if (left.number[i - 1] < right.number[i - 1])
                     return true;
-                else if (left.number[i] > right.number[i])
+                else if (left.number[i - 1] > right.number[i - 1])
                     return false;
             return false;
         } else
@@ -123,21 +135,22 @@ bool operator>(const big_integer& left, const big_integer& right) {
         return false;
     if (left.sign) {
         if (left.size == right.size) {
-            for (int i = left.size - 1; i >= 0; i--)
-                if (left.number[i] < right.number[i])
+            for (unsigned i = left.size; i > 0; i--)
+                if (left.number[i - 1] < right.number[i - 1])
                     return true;
-                else if (left.number[i] > right.number[i])
+                else if (left.number[i - 1] > right.number[i - 1])
                     return false;
             return false;
         } else
             return left.size < right.size;
     } else {
         if (left.size == right.size) {
-            for (int i = left.size - 1; i >= 0; i--)
-                if (left.number[i] > right.number[i])
+            for (unsigned i = left.size; i > 0; i--) {
+                if (left.number[i - 1] > right.number[i - 1])
                     return true;
-                else if (left.number[i] < right.number[i])
+                else if (left.number[i - 1] < right.number[i - 1])
                     return false;
+            }
             return false;
         } else
             return left.size > right.size;
@@ -162,7 +175,7 @@ const big_integer operator+(const big_integer& left, const big_integer& right) {
         ans.sign = left.sign;
         bool c = 0;
         ans.size = max(left.size, right.size);
-        for (int i = 0; i < max(left.size, right.size); i++) {
+        for (unsigned i = 0; i < max(left.size, right.size); i++) {
             pair <bool, bool> res_sum = sum((bool) (i < left.size ? left.number[i] : 0), (bool) (i < right.size ? right.number[i] : 0), c);
             ans.number[i] = res_sum.first;
             c = res_sum.second;
@@ -207,7 +220,7 @@ const big_integer operator-(const big_integer& left, const big_integer& right) {
                 pair<bool, bool> r;
                 ans.size = left_.size;
                 ans.change_capacity(ans.size);
-                for (int i = 0; i < right_.size; i++) {
+                for (unsigned i = 0; i < right_.size; i++) {
                     r = sub(left_.number[i], right_.number[i], c);
                     ans.number[i] = r.first;
                     c = r.second;
@@ -245,7 +258,7 @@ const big_integer operator*(const big_integer& left, const big_integer& right) {
     ans.sign = (left.sign != right.sign);
 	
     ans.change_capacity(ans.size);
-    for (int i = 0; i < right.size; i++) {
+    for (unsigned i = 0; i < right.size; i++) {
         c = false;
         for (int j = 0; j < left.size; j++) {
             r = sum(ans.number[i + j], left.number[j] * right.number[i], c);
@@ -329,7 +342,7 @@ const big_integer operator&(const big_integer& left, const big_integer& right) {
         ans.size = max(left.size, right.size) + 5;
         ans.change_capacity(ans.size);
         
-        for (int i = 0; i < ans.size; i++)
+        for (unsigned i = 0; i < ans.size; i++)
             ans.number[i] = left_.number[i] & right_.number[i];
         ans.out_twos_complement(max(left.size, right.size) + 5);
     } else if (left.sign) {
@@ -338,7 +351,7 @@ const big_integer operator&(const big_integer& left, const big_integer& right) {
         ans.size = max(left.size, right.size) + 5;
         ans.change_capacity(ans.size);
         
-        for (int i = 0; i < ans.size; i++)
+        for (unsigned i = 0; i < ans.size; i++)
             i < right.size ? ans.number[i] = left_.number[i] & right.number[i] : ans.number[i] = 0;
         ans.sign = false;
     } else if (right.sign) {
@@ -347,7 +360,7 @@ const big_integer operator&(const big_integer& left, const big_integer& right) {
         ans.size = max(left.size, right.size) + 5;
         ans.change_capacity(ans.size);
         
-        for (int i = 0; i < ans.size; i++)
+        for (unsigned i = 0; i < ans.size; i++)
             i < left.size ? ans.number[i] = left.number[i] & right_.number[i] : ans.number[i] = 0;
         ans.sign = false;
     } else {
@@ -355,7 +368,7 @@ const big_integer operator&(const big_integer& left, const big_integer& right) {
         ans.size = min(left.size, right.size);
         
 		ans.change_capacity(ans.size);
-        for (int i = 0; i < ans.size; i++)
+        for (unsigned i = 0; i < ans.size; i++)
             ans.number[i] = left.number[i] & right.number[i];
     }
     ans.bag();
@@ -372,7 +385,7 @@ const big_integer operator|(const big_integer& left, const big_integer& right) {
 		
         ans.change_capacity(ans.size);
         
-        for (int i = 0; i < ans.size; i++)
+        for (unsigned i = 0; i < ans.size; i++)
             ans.number[i] = left_.number[i] | right_.number[i];
         ans.out_twos_complement(max(left.size, right.size) + 5);
         ans.sign = true;
@@ -383,7 +396,7 @@ const big_integer operator|(const big_integer& left, const big_integer& right) {
 		
 		ans.change_capacity(ans.size);
         
-        for (int i = 0; i < ans.size; i++)
+        for (unsigned i = 0; i < ans.size; i++)
             i < right.size ? ans.number[i] = left_.number[i] | right.number[i] : ans.number[i] = left_.number[i];
         ans.out_twos_complement(ans.size);
         ans.sign = true;
@@ -394,7 +407,7 @@ const big_integer operator|(const big_integer& left, const big_integer& right) {
 		
 		ans.change_capacity(ans.size);
         
-        for (int i = 0; i < ans.size; i++)
+        for (unsigned i = 0; i < ans.size; i++)
             i < left.size ? ans.number[i] = left.number[i] | right_.number[i] : ans.number[i] = right_.number[i];
         ans.out_twos_complement(ans.size);
         ans.sign = true;
@@ -404,7 +417,7 @@ const big_integer operator|(const big_integer& left, const big_integer& right) {
 		
 		ans.change_capacity(ans.size);
         
-        for (int i = 0; i < ans.size; i++)
+        for (unsigned i = 0; i < ans.size; i++)
             if (i < left.size && i < right.size)
                 ans.number[i] = left.number[i] | right.number[i];
             else if (i < left.size)
@@ -426,7 +439,7 @@ const big_integer operator^(const big_integer& left, const big_integer& right) {
         ans.size = max(left.size, right.size) + 5;
         ans.change_capacity(ans.size);
         
-        for (int i = 0; i < ans.size; i++)
+        for (unsigned i = 0; i < ans.size; i++)
             ans.number[i] = left_.number[i] ^ right_.number[i];
         ans.sign = false;
     } else if (left.sign) {
@@ -435,7 +448,7 @@ const big_integer operator^(const big_integer& left, const big_integer& right) {
         ans.size = max(left.size, right.size) + 5;
         ans.change_capacity(ans.size);
         
-        for (int i = 0; i < ans.size; i++)
+        for (unsigned i = 0; i < ans.size; i++)
             i < right.size ? ans.number[i] = left_.number[i] ^ right.number[i] : ans.number[i] = left_.number[i];
         ans.out_twos_complement(ans.size);
         ans.sign = true;
@@ -446,7 +459,7 @@ const big_integer operator^(const big_integer& left, const big_integer& right) {
 		
 		ans.change_capacity(ans.size);
         
-        for (int i = 0; i < ans.size; i++)
+        for (unsigned i = 0; i < ans.size; i++)
             i < left.size ? ans.number[i] = left.number[i] ^ right_.number[i] : ans.number[i] = right_.number[i];
         ans.out_twos_complement(ans.size);
         ans.sign = true;
@@ -454,7 +467,7 @@ const big_integer operator^(const big_integer& left, const big_integer& right) {
         ans.sign = false;
         ans.size = max(left.size, right.size);
         
-        for (int i = 0; i < ans.size; i++)
+        for (unsigned i = 0; i < ans.size; i++)
             if (i < left.size && i < right.size)
                 ans.number[i] = left.number[i] ^ right.number[i];
             else if (i < left.size)
@@ -513,7 +526,7 @@ const big_integer& operator--(big_integer& tmp) {
 
 const big_integer operator<<(big_integer const& tmp, int left) {
     big_integer ans = tmp, two(2);
-    for (int i = 1; i <= left; i++)
+    for (unsigned i = 1; i <= left; i++)
         ans *= two;
     ans.bag();
     return ans;
@@ -522,13 +535,13 @@ const big_integer operator<<(big_integer const& tmp, int left) {
 const big_integer operator>>(big_integer const& tmp, int right) {
     big_integer ans = tmp, two(2);
     if (!tmp.sign) {
-        for (int i = 1; i <= right; i++)
+        for (unsigned i = 1; i <= right; i++)
             ans /= two;
         ans.bag();
         return ans;
     } else {
         ans.to_twos_complement(ans.size + right);
-        for (int i = 1; i <= right; i++)
+        for (unsigned i = 1; i <= right; i++)
             ans /= two;
         ans.out_twos_complement(ans.size + right);
         ans.sign = true;
@@ -549,7 +562,7 @@ big_integer& operator>>=(big_integer& tmp, int right) {
 
 int big_integer::toInt()const {
         int res = 0;
-        for (int i = 0; i < size; i++) {
+        for (unsigned i = 0; i < size; i++) {
             res += number[i] * (1 << i);
         }
         if (sign)
@@ -589,7 +602,7 @@ void big_integer::to_twos_complement(int n) {
     sign = false;
 	unsigned j = size;
 	change_capacity(max(size, (unsigned)n));
-    for (int i = 0; i < n; i++) {
+    for (unsigned i = 0; i < n; i++) {
         if (i >= j) {
             number[j] = 1;
             j++;
@@ -607,14 +620,14 @@ void big_integer::out_twos_complement(int n) {
     *this += -1;
     sign = true;
 
-    for (int i = 0; i < n; i++)
+    for (unsigned i = 0; i < n; i++)
         if (i < size)
             number[i] = !number[i];
     bag();
 }
 
 void big_integer::copy(bool *in, bool *out, int n) {
-	for (int i = 0; i < n; i++)
+	for (unsigned i = 0; i < n; i++)
 		out[i] = in[i];
 }
 
@@ -622,7 +635,7 @@ void big_integer::change_capacity(unsigned newCapacity) {
 	bool *tmp = new bool[size];
 	copy(number, tmp, size);
 	number = new bool[newCapacity];
-	for (int i = 0; i < newCapacity; i++)
+	for (unsigned i = 0; i < newCapacity; i++)
 		number[i] = 0;
 	copy(tmp, number, size);
 }
