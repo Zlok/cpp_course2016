@@ -30,7 +30,7 @@ public:
     big_integer();
     big_integer(const big_integer& tmp);
     big_integer(const int& num);
-    big_integer(string s);
+    explicit big_integer(string s);
 	~big_integer() {
 		for (int i = size - 1; i >= 0; i--)
 			number[i] = NULL;
