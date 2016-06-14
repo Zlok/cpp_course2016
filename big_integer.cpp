@@ -443,7 +443,7 @@ big_integer operator<<(big_integer const &a, int b) {
 
 	ui64 quick_shift = ui64((long long)b >> 5), slow_shift = 1U << ui64(((long long)b) & 31);
 	aa.box->v.reverse();
-	for (int i = 0; i < quick_shift; ++i) {
+	for (ui64 i = 0; i < quick_shift; ++i) {
 		aa.box->v.push_back(0);
 	}
 	aa.box->v.reverse();
@@ -466,7 +466,7 @@ big_integer operator>>(big_integer const &a, int b) {
 
 	ui64 quick_shift = ui64(b >> 5), slow_shift = 1UL << (b & 31);
     aa.box->v.reverse();
-	for (int i = 0; i < quick_shift; ++i) {
+	for (ui64 i = 0; i < quick_shift; ++i) {
 		aa.box->v.pop_back();
 	}
     aa.box->v.reverse();
