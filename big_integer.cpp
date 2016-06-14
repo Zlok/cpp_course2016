@@ -24,9 +24,14 @@ big_integer::big_integer(ui64 a) {
 
 big_integer::big_integer(int a) {
 	// TODO: this function is not exception safe
-	// TOOD: abs(INT_MIN) is undefined behavior
+	// TODO: abs(INT_MIN) is undefined behavior
 	bool is_negative = (a < 0);
-	ui64 aa = (ui64)abs((long long)a);
+	ui64 aa;
+    if (a < 0) {
+        long long tmp = a;
+	    aa = (ui64) (-tmp);
+    } else
+        aa = (ui64)a;
 	box = new copy_on_write();
 	try {
         box->v.push_back(aa);
@@ -115,7 +120,7 @@ void big_integer::make_new() {
 	// TODO: this function is not exception safe
 	big_integer t = *this;
 	this->delete_copy();
-        this->box = new copy_on_write();
+	this->box = new copy_on_write();
 
     this->box->cnt = 1;
 	this->box->v = t.box->v;
@@ -202,7 +207,13 @@ std::pair<big_integer, big_integer> divmod(big_integer a, big_integer b) {
 big_integer& big_integer::operator/=(int rhs) {
 	// TODO: abs(INT_MIN) is undefined behavior
 	bool res_sign = (rhs < 0) ^ bool(box->v.back() & 1);
-	ui64 urhs = std::abs((long long)rhs), rem = 0;
+    ui64 urhs;
+    if (rhs < 0) {
+        long long tmp = rhs;
+        urhs = (ui64) (-tmp);
+    } else
+        urhs = (ui64)rhs;
+    ui64 rem = 0;
 	*this = abs(*this);
 
 	for (size_t i = this->box->v.size() - 1; i != 0; --i) {
