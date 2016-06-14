@@ -34,7 +34,7 @@ _start:
 ;    rsi -- address of multiplier #2 (long number)
 ;    rcx -- length of long number in qwords
 ; result:
-;    product is written to rdi
+;    product is written to r9
 mul_long_long:
 		push 		rsi
 		push 		rcx
