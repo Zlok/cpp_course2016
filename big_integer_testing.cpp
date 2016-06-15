@@ -38,7 +38,6 @@ TEST(correctness, copy_ctor)
     EXPECT_EQ(b, 3);
 }
 
-
 TEST(correctness, copy_ctor_real_copy)
 {
     big_integer a = 3;
@@ -74,7 +73,6 @@ TEST(correctness, self_assignment)
     EXPECT_TRUE(a == 5);
 }
 
-
 TEST(correctness, assignment_return_value)
 {
     big_integer a = 4;
@@ -100,6 +98,7 @@ TEST(correctness, comparisons)
     EXPECT_TRUE(a <= c);
     EXPECT_TRUE(c >= a);
 }
+
 TEST(correctness, compare_zero_and_minus_zero)
 {
     big_integer a;
@@ -224,6 +223,15 @@ TEST(correctness, div_int_min)
 {
     big_integer a = std::numeric_limits<int>::min();
     EXPECT_TRUE((a / a) == (a / std::numeric_limits<int>::min()));
+}
+
+TEST(correctness, div_int_min_2)
+{
+    big_integer a = std::numeric_limits<int>::min();
+    big_integer b = -1;
+    big_integer c = a / b;
+    EXPECT_TRUE(c == (a / -1));
+    EXPECT_TRUE((c - std::numeric_limits<int>::max()) == 1);
 }
 
 TEST(correctness, div_signed)
