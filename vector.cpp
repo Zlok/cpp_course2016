@@ -1,8 +1,6 @@
 #include "vector.h"
 
-Vector::Vector(size_t n, ui64 el) {
-    // TODO: prefer using initializer list
-    length = n;
+Vector::Vector(size_t n, ui64 el) : length(n) {
     if (n <= 1) {
         is_long = 0;
         small_a = el;

@@ -4,27 +4,21 @@
 #include <iostream>
 
 big_integer::big_integer(const big_integer &other) : box(other.box) {
-	// TODO: prefer using initializer list
 	box->cnt++;
 }
 
-big_integer::big_integer(ui64 a) {
-	// TODO: this function is not exception safe
-	// TODO: prefer using initializer list
-	    box = new copy_on_write();
-    try {
+big_integer::big_integer(ui64 a) : box(new copy_on_write()) {
+	try {
         box->v.push_back(a);
         box->v.push_back(0);
     } catch (...) {
-        delete(box);
+        delete box;
         throw;
     }
 	box->cnt = 1;
 }
 
-big_integer::big_integer(int a) {
-	// TODO: this function is not exception safe
-	// TODO: abs(INT_MIN) is undefined behavior
+big_integer::big_integer(int a) : box(new copy_on_write()) {
 	bool is_negative = (a < 0);
 	ui64 aa;
     if (a < 0) {
@@ -32,17 +26,14 @@ big_integer::big_integer(int a) {
 	    aa = (ui64) (-tmp);
     } else
         aa = (ui64)a;
-	box = new copy_on_write();
 	try {
         box->v.push_back(aa);
         box->v.push_back(0);
     } catch (...) {
-        delete(box);
+        delete box;
         throw;
     }
-
 	box->cnt = 1;
-
     if (is_negative) {
 		*this = -(*this);
 	}
@@ -51,7 +42,7 @@ big_integer::big_integer(int a) {
 big_integer::big_integer(const std::string &s) {
 	const ui64 local_base(1000000000);
 	const int base_digits = 9;
-	Vector a; 
+	Vector a;
 	int pos = (s[0] == '-' || s[0] == '+') ? 1 : 0;
 	for (int i = s.size() - 1; i >= pos; i -= 9) {
 		ui64 x = 0;
@@ -64,64 +55,57 @@ big_integer::big_integer(const std::string &s) {
 		a.pop_back();
 	}
 	if (a.empty()) {
-		// TODO: this function is not exception safe
-            box = new copy_on_write();
-        try {
-            box->v.push_back(0);
-            box->v.push_back(0);
-        } catch (...) {
-            delete(box);
-            throw;
-        }
+		box = new copy_on_write();
+		try {
+			box->v.push_back(0);
+			box->v.push_back(0);
+		} catch (...) {
+			delete box;
+			throw;
+		}
 		box->cnt = 1;
 		return;
 	}
-	
+
 	box = new copy_on_write();
-	while (!a.empty()) {
-		ui64 rem = 0;
-		for (size_t i = a.size(); i != 0; --i) {
-			size_t j = i - 1;
-			ui64 cur = a[j] + rem * local_base;
-			a[j] = (ui64) (cur / base);
-			rem = (ui64) (cur % base);
+	try {
+		while (!a.empty()) {
+			ui64 rem = 0;
+			for (size_t i = a.size(); i != 0; --i) {
+				size_t j = i - 1;
+				ui64 cur = a[j] + rem * local_base;
+				a[j] = (ui64) (cur / base);
+				rem = (ui64) (cur % base);
+			}
+			box->v.push_back(rem);
+			while (!a.empty() && !a.back()) {
+				a.pop_back();
+			}
 		}
-
-
-		try {
-            box->v.push_back(rem);
-        } catch (...) {
-            delete(box);
-            throw;
-        }
-
-		while (!a.empty() && !a.back()) {
-			a.pop_back();
+		while (box->v.size() > 1 && !box->v.back()) {
+			box->v.pop_back();
 		}
-	}
-	
-	while (box->v.size() > 1 && !box->v.back()) {
-		box->v.pop_back();
-	}
-    try {
-        box->v.push_back(0);
-    } catch (...) {
-        delete(box);
-        throw;
-    }
-
-	box->cnt = 1;
-	if (s[0] == '-') {
-		*this = -(*this);
+		box->v.push_back(0);
+		box->cnt = 1;
+		if (s[0] == '-') {
+			*this = -(*this);
+		}
+	} catch (...) {
+		delete box;
+		throw;
 	}
 }
 
 void big_integer::make_new() {
 	// TODO: this function is not exception safe
 	big_integer t = *this;
-	this->delete_copy();
-	this->box = new copy_on_write();
-
+    this->delete_copy();
+	try {
+		this->box = new copy_on_write();
+	} catch (...) {
+        *this = t;
+		throw;
+	}
     this->box->cnt = 1;
 	this->box->v = t.box->v;
 }
@@ -150,8 +134,6 @@ big_integer& big_integer::operator*=(big_integer const &rhs) {
 }
 
 std::pair<big_integer, big_integer> divmod(big_integer a, big_integer b) {
-	// pass parameters but value, don't make copy inside
-	//big_integer a1(a), b1(b);
 	big_integer res_div, res_mod;
 	Vector vec_div;
 
@@ -205,7 +187,6 @@ std::pair<big_integer, big_integer> divmod(big_integer a, big_integer b) {
 }
 
 big_integer& big_integer::operator/=(int rhs) {
-	// TODO: abs(INT_MIN) is undefined behavior
 	bool res_sign = (rhs < 0) ^ bool(box->v.back() & 1);
     ui64 urhs;
     if (rhs < 0) {

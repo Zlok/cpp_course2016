@@ -7,7 +7,7 @@
 #include <limits>
 
 struct big_integer {
-    static const ui64 base = (std::numeric_limits<unsigned long long>::max() >> 32) + 1; //2^32
+    static const ui64 base = ((std::numeric_limits<unsigned long long>::max()) >> 32) + 1; //2^32
     static const ui64 neg_sign = base - 1;
 
     struct copy_on_write {
