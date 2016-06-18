@@ -127,7 +127,7 @@ void big_integer::make_new() {
 }
 
 big_integer& big_integer::operator=(big_integer const &rhs) {
-	if (*this == rhs) {
+	if (this == &rhs) {
 		return *this;
 	}
 

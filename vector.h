@@ -12,11 +12,11 @@ struct Vector {
     ui64& back();
     void reverse();
     bool empty();
-    size_t size();
+    size_t size() __attribute__((always_inline));
 
     Vector& operator=(Vector const &vec);
-    ui64& operator[](const size_t k);
-    ui64 operator[](const size_t k) const;
+    ui64& operator[](const size_t k) __attribute__((always_inline));
+    ui64 operator[](const size_t k) const __attribute__((always_inline));
 
 private:
     std::vector<ui64> a;
@@ -24,3 +24,15 @@ private:
     bool is_long;
     size_t length;
 };
+
+inline size_t Vector::size() {
+    return length;
+}
+
+inline ui64& Vector::operator[](const size_t k) {
+    return (is_long ? a[k] : small_a);
+}
+
+inline ui64 Vector::operator[](const size_t k) const {
+    return (is_long ? a[k] : small_a);
+}
