@@ -74,22 +74,10 @@ bool Vector::empty() {
     return (length == 0);
 }
 
-size_t Vector::size() {
-    return length;
-}
-
 Vector& Vector::operator=(Vector const &other) {
     a = other.a;
     is_long = other.is_long;
     small_a = other.small_a;
     length = other.length;
     return *this;
-}
-
-ui64& Vector::operator[](const size_t k) {
-    return (is_long ? a[k] : small_a);
-}
-
-ui64 Vector::operator[](const size_t k) const {
-    return (is_long ? a[k] : small_a);
 }
