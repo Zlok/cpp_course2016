@@ -4,21 +4,14 @@
 #include <iostream>
 
 big_integer::big_integer(const big_integer &other) : box(other.box) {
-	box->cnt++;
 }
 
-big_integer::big_integer(ui64 a) : box(new copy_on_write()) {
-	try {
-        box->v.push_back(a);
-        box->v.push_back(0);
-    } catch (...) {
-        delete box;
-        throw;
-    }
-	box->cnt = 1;
+big_integer::big_integer(ui64 a) : box(std::shared_ptr<Vector>(new Vector())) {
+	    box->push_back(a);
+        box->push_back(0);
 }
 
-big_integer::big_integer(int a) : box(new copy_on_write()) {
+big_integer::big_integer(int a) : box(std::shared_ptr<Vector>(new Vector())) {
 	bool is_negative = (a < 0);
 	ui64 aa;
     if (a < 0) {
@@ -26,14 +19,8 @@ big_integer::big_integer(int a) : box(new copy_on_write()) {
 	    aa = (ui64) (-tmp);
     } else
         aa = (ui64)a;
-	try {
-        box->v.push_back(aa);
-        box->v.push_back(0);
-    } catch (...) {
-        delete box;
-        throw;
-    }
-	box->cnt = 1;
+	    box->push_back(aa);
+        box->push_back(0);
     if (is_negative) {
 		*this = -(*this);
 	}
@@ -55,69 +42,37 @@ big_integer::big_integer(const std::string &s) {
 		a.pop_back();
 	}
 	if (a.empty()) {
-		box = new copy_on_write();
-		try {
-			box->v.push_back(0);
-			box->v.push_back(0);
-		} catch (...) {
-			delete box;
-			throw;
-		}
-		box->cnt = 1;
+		box = std::shared_ptr<Vector>(new Vector());
+		box->push_back(0);
+		box->push_back(0);
 		return;
 	}
 
-	box = new copy_on_write();
-	try {
-		while (!a.empty()) {
-			ui64 rem = 0;
-			for (size_t i = a.size(); i != 0; --i) {
-				size_t j = i - 1;
-				ui64 cur = a[j] + rem * local_base;
-				a[j] = (ui64) (cur / base);
-				rem = (ui64) (cur % base);
-			}
-			box->v.push_back(rem);
-			while (!a.empty() && !a.back()) {
-				a.pop_back();
-			}
+	box = std::shared_ptr<Vector>(new Vector());
+	while (!a.empty()) {
+		ui64 rem = 0;
+		for (size_t i = a.size(); i != 0; --i) {
+			size_t j = i - 1;
+			ui64 cur = a[j] + rem * local_base;
+			a[j] = (ui64) (cur / base);
+			rem = (ui64) (cur % base);
 		}
-		while (box->v.size() > 1 && !box->v.back()) {
-			box->v.pop_back();
+		box->push_back(rem);
+		while (!a.empty() && !a.back()) {
+			a.pop_back();
 		}
-		box->v.push_back(0);
-		box->cnt = 1;
-		if (s[0] == '-') {
-			*this = -(*this);
-		}
-	} catch (...) {
-		delete box;
-		throw;
 	}
-}
-
-void big_integer::make_new() {
-	// TODO: this function is not exception safe
-	big_integer t = *this;
-    this->delete_copy();
-	try {
-		this->box = new copy_on_write();
-	} catch (...) {
-        *this = t;
-		throw;
+	while (box->size() > 1 && !box->back()) {
+		box->pop_back();
 	}
-    this->box->cnt = 1;
-	this->box->v = t.box->v;
+	box->push_back(0);
+	if (s[0] == '-') {
+		*this = -(*this);
+	}
 }
 
 big_integer& big_integer::operator=(big_integer const &rhs) {
-	if (this == &rhs) {
-		return *this;
-	}
-
-	delete_copy();
 	box = rhs.box;
-	box->cnt++;
 	return *this;
 }
 
@@ -137,12 +92,12 @@ std::pair<big_integer, big_integer> divmod(big_integer a, big_integer b) {
 	big_integer res_div, res_mod;
 	Vector vec_div;
 
-	ui64 res_sign = (a.box->v.back() ^ b.box->v.back());
-	ui64 y = b.box->v.back();
+	ui64 res_sign = (a.box->back() ^ b.box->back());
+	ui64 y = b.box->back();
 	a = abs(a);
 	b = abs(b);
 
-	int col = a.box->v.size() - b.box->v.size();
+	int col = a.box->size() - b.box->size();
 	if (col > 0) {
 		b <<= col * 32;
 	}
@@ -174,7 +129,7 @@ std::pair<big_integer, big_integer> divmod(big_integer a, big_integer b) {
 		res_div = 0;
 	} else  {
         vec_div.push_back(0);
-		res_div.box->v = vec_div;
+		res_div.box = std::shared_ptr<Vector>(new Vector(vec_div));
 		if (res_sign) {
 			res_div = -res_div;
 			if (!y) res_mod = -res_mod;
@@ -187,7 +142,7 @@ std::pair<big_integer, big_integer> divmod(big_integer a, big_integer b) {
 }
 
 big_integer& big_integer::operator/=(int rhs) {
-	bool res_sign = (rhs < 0) ^ bool(box->v.back() & 1);
+	bool res_sign = (rhs < 0) ^ bool(box->back() & 1);
     ui64 urhs;
     if (rhs < 0) {
         long long tmp = rhs;
@@ -197,10 +152,10 @@ big_integer& big_integer::operator/=(int rhs) {
     ui64 rem = 0;
 	*this = abs(*this);
 
-	for (size_t i = this->box->v.size() - 1; i != 0; --i) {
+	for (size_t i = this->box->size() - 1; i != 0; --i) {
 		size_t j = i - 1;
-		ui64 cur = this->box->v[j] + rem * base;
-        this->box->v[j] = cur / urhs;		
+		ui64 cur = this->box->operator[](j) + rem * base;
+        this->box->operator[](j) = cur / urhs;
         rem = cur % urhs;
 	}
 
@@ -272,23 +227,23 @@ big_integer big_integer::operator-() const {
 }
 
 void trim(big_integer &a) {
-	while (a.box->v.size() > 2 && (a.box->v[a.box->v.size() - 1] == a.box->v[a.box->v.size() - 2])) {
-            a.box->v.pop_back();
+	while (a.box->size() > 2 && (a.box->operator[](a.box->size() - 1) == a.box->operator[](a.box->size() - 2))) {
+            a.box->pop_back();
 	}
 }
 
 big_integer abs(big_integer const &a) {
 	big_integer b = a;
-	if (b.box->v.back()) b = -b;
+	if (b.box->back()) b = -b;
 	return b;
 }
 
 big_integer big_integer::operator~() const {
 	big_integer b;
-	b.box->v.resize(this->box->v.size());
+	b.box->resize(this->box->size());
 
-	for (size_t i = 0; i < b.box->v.size(); ++i) {
-		b.box->v[i] = (~this->box->v[i]) & neg_sign;
+	for (size_t i = 0; i < b.box->size(); ++i) {
+		b.box->operator[](i) = (~this->box->operator[](i)) & neg_sign;
 	}
 
 	trim(b);
@@ -299,18 +254,18 @@ big_integer operator+(big_integer const &a, big_integer const &b) {
 	big_integer aa = a, bb = b, res;
 
 	ui64 t = 0;
-	while (aa.box->v.size() < bb.box->v.size()) aa.box->v.push_back(aa.box->v.back());
-	while (bb.box->v.size() < aa.box->v.size()) bb.box->v.push_back(bb.box->v.back());
-	res.box->v.resize(aa.box->v.size());
+	while (aa.box->size() < bb.box->size()) aa.box->push_back(aa.box->back());
+	while (bb.box->size() < aa.box->size()) bb.box->push_back(bb.box->back());
+	res.box->resize(aa.box->size());
 
-	for (size_t i = 0; i < aa.box->v.size(); ++i) {
-		t += aa.box->v[i] + bb.box->v[i];
-		res.box->v[i] = t & big_integer::neg_sign;
+	for (size_t i = 0; i < aa.box->size(); ++i) {
+		t += aa.box->operator[](i) + bb.box->operator[](i);
+		res.box->operator[](i) = t & big_integer::neg_sign;
 		t >>= 32;
 	}
 	
-	bool ts = t & 1, as = aa.box->v.back() & 1, bs = bb.box->v.back() & 1;
-	res.box->v.push_back(ts ^ as ^ bs ? big_integer::neg_sign : 0);
+	bool ts = t & 1, as = aa.box->back() & 1, bs = bb.box->back() & 1;
+	res.box->push_back(ts ^ as ^ bs ? big_integer::neg_sign : 0);
 
 	trim(aa);
 	trim(bb);
@@ -327,24 +282,24 @@ big_integer operator-(big_integer const &a, big_integer const &b) {
 
 big_integer operator*(big_integer const &a, big_integer const &b) {
 	big_integer aa = a, bb = b, res;
-	ui64 res_sign = (aa.box->v.back() ^ bb.box->v.back());
+	ui64 res_sign = (aa.box->back() ^ bb.box->back());
 	aa = abs(aa);
 	bb = abs(bb);
 
-	res.box->v.resize(aa.box->v.size() + bb.box->v.size());
-	for (size_t i = 0; i < aa.box->v.size(); ++i) {
+	res.box->resize(aa.box->size() + bb.box->size());
+	for (size_t i = 0; i < aa.box->size(); ++i) {
 		ui64 carry = 0;
-		for (size_t j = 0; j < bb.box->v.size() || carry; ++j) {
-			ui64 cur = res.box->v[i + j] + aa.box->v[i] * (j < bb.box->v.size() ? bb.box->v[j] : 0) + carry;
-			res.box->v[i + j] = cur & big_integer::neg_sign;
+		for (size_t j = 0; j < bb.box->size() || carry; ++j) {
+			ui64 cur = res.box->operator[](i + j) + aa.box->operator[](i) * (j < bb.box->size() ? bb.box->operator[](j) : 0) + carry;
+			res.box->operator[](i + j) = cur & big_integer::neg_sign;
 			carry = cur >> 32;
 		}
 	}
 
-	while (res.box->v.size() > 1 && !res.box->v.back()) {
-		res.box->v.pop_back();
+	while (res.box->size() > 1 && !res.box->back()) {
+		res.box->pop_back();
 	}
-	res.box->v.push_back(0);
+	res.box->push_back(0);
 	if (res_sign) res = -res;
 
 	return res;
@@ -363,12 +318,12 @@ big_integer operator%(big_integer const &a, big_integer const &b) {
 big_integer operator&(big_integer const &a, big_integer const &b) {
 	big_integer aa = a, bb = b, res;
 
-	while (aa.box->v.size() < bb.box->v.size()) aa.box->v.push_back(aa.box->v.back());
-	while (bb.box->v.size() < aa.box->v.size()) bb.box->v.push_back(bb.box->v.back());
-	res.box->v.resize(aa.box->v.size());
+	while (aa.box->size() < bb.box->size()) aa.box->push_back(aa.box->back());
+	while (bb.box->size() < aa.box->size()) bb.box->push_back(bb.box->back());
+	res.box->resize(aa.box->size());
 
-	for (size_t i = 0; i < aa.box->v.size(); ++i) {
-		res.box->v[i] = aa.box->v[i] & bb.box->v[i];
+	for (size_t i = 0; i < aa.box->size(); ++i) {
+		res.box->operator[](i) = aa.box->operator[](i) & bb.box->operator[](i);
 	}
 
 	trim(aa);
@@ -381,12 +336,12 @@ big_integer operator&(big_integer const &a, big_integer const &b) {
 big_integer operator|(big_integer const &a, big_integer const &b) {
 	big_integer aa = a, bb = b, res;
 
-	while (aa.box->v.size() < bb.box->v.size()) aa.box->v.push_back(aa.box->v.back());
-	while (bb.box->v.size() < aa.box->v.size()) bb.box->v.push_back(bb.box->v.back());
-	res.box->v.resize(aa.box->v.size());
+	while (aa.box->size() < bb.box->size()) aa.box->push_back(aa.box->back());
+	while (bb.box->size() < aa.box->size()) bb.box->push_back(bb.box->back());
+	res.box->resize(aa.box->size());
 
-	for (size_t i = 0; i < aa.box->v.size(); ++i) {
-		res.box->v[i] = aa.box->v[i] | bb.box->v[i];
+	for (size_t i = 0; i < aa.box->size(); ++i) {
+		res.box->operator[](i) = aa.box->operator[](i) | bb.box->operator[](i);
 	}
 
 	trim(aa);
@@ -399,12 +354,12 @@ big_integer operator|(big_integer const &a, big_integer const &b) {
 big_integer operator^(big_integer const &a, big_integer const &b) {
 	big_integer aa = a, bb = b, res;
 
-	while (aa.box->v.size() < bb.box->v.size()) aa.box->v.push_back(aa.box->v.back());
-	while (bb.box->v.size() < aa.box->v.size()) bb.box->v.push_back(bb.box->v.back());
-	res.box->v.resize(aa.box->v.size());
+	while (aa.box->size() < bb.box->size()) aa.box->push_back(aa.box->back());
+	while (bb.box->size() < aa.box->size()) bb.box->push_back(bb.box->back());
+	res.box->resize(aa.box->size());
 
-	for (size_t i = 0; i < aa.box->v.size(); ++i) {
-		res.box->v[i] = aa.box->v[i] ^ bb.box->v[i];
+	for (size_t i = 0; i < aa.box->size(); ++i) {
+		res.box->operator[](i) = aa.box->operator[](i) ^ bb.box->operator[](i);
 	}
 
 	trim(aa);
@@ -419,15 +374,13 @@ big_integer operator<<(big_integer const &a, int b) {
 	if (aa == 0 || b == 0) {
 		return aa;
 	}
-	
-	aa.make_new();
 
 	ui64 quick_shift = ui64((long long)b >> 5), slow_shift = 1U << ui64(((long long)b) & 31);
-	aa.box->v.reverse();
+	aa.box->reverse();
 	for (ui64 i = 0; i < quick_shift; ++i) {
-		aa.box->v.push_back(0);
+		aa.box->push_back(0);
 	}
-	aa.box->v.reverse();
+	aa.box->reverse();
 
 	aa *= slow_shift;
 
@@ -439,21 +392,20 @@ big_integer operator>>(big_integer const &a, int b) {
 	if (aa == 0 || b == 0) {
 		return aa;
 	}
-	if ((b / 32) >= (int) (aa.box->v.size() - 1)) {
+	if ((b / 32) >= (int) (aa.box->size() - 1)) {
 		aa = big_integer(0);
 		return aa;
 	}
-	aa.make_new();
 
 	ui64 quick_shift = ui64(b >> 5), slow_shift = 1UL << (b & 31);
-    aa.box->v.reverse();
+    aa.box->reverse();
 	for (ui64 i = 0; i < quick_shift; ++i) {
-		aa.box->v.pop_back();
+		aa.box->pop_back();
 	}
-    aa.box->v.reverse();
+    aa.box->reverse();
 
 	aa /= slow_shift;
-    if (a.box->v.back())
+    if (a.box->back())
         aa -= 1;
     else if (b == 31)
         aa = -aa;
@@ -461,14 +413,14 @@ big_integer operator>>(big_integer const &a, int b) {
 }
 
 bool operator==(big_integer const &a, big_integer const &b) {
-	ui64 as = a.box->v.back(), bs = b.box->v.back();
-	if ((a.box->v.size() != b.box->v.size()) || (as != bs)) {
+	ui64 as = a.box->back(), bs = b.box->back();
+	if ((a.box->size() != b.box->size()) || (as != bs)) {
 		return 0;
 	}
 
 	bool f = true;
-	for (size_t i = 0; i < a.box->v.size() && f; ++i) {
-		f = (a.box->v[i] == b.box->v[i]);
+	for (size_t i = 0; i < a.box->size() && f; ++i) {
+		f = (a.box->operator[](i) == b.box->operator[](i));
 	}
 
 	return f;
@@ -480,7 +432,7 @@ bool operator!=(big_integer const &a, big_integer const &b) {
 
 bool operator<(big_integer const &a, big_integer const &b) {
 	big_integer aa = a, bb = b;
-	bool as = aa.box->v.back() & 1, bs = bb.box->v.back() & 1;
+	bool as = aa.box->back() & 1, bs = bb.box->back() & 1;
 
 	if (as ^ bs) {
 		return !bs;
@@ -490,18 +442,18 @@ bool operator<(big_integer const &a, big_integer const &b) {
 	aa = abs(aa);
 	bb = abs(bb);
 
-	if (aa.box->v.size() != bb.box->v.size()) {
-		return ((aa.box->v.size() < bb.box->v.size()) ^ cs);
+	if (aa.box->size() != bb.box->size()) {
+		return ((aa.box->size() < bb.box->size()) ^ cs);
 	}
 
 	ptrdiff_t i;
-	for (i = (ptrdiff_t)(aa.box->v.size() - 1); (i >= 0) && (aa.box->v[i] == bb.box->v[i]); --i) {} 
+	for (i = (ptrdiff_t)(aa.box->size() - 1); (i >= 0) && (aa.box->operator[](i) == bb.box->operator[](i)); --i) {}
 
 	if (i < 0) {
 		return 0;
 	}
 
-	return ((aa.box->v[i] < bb.box->v[i]) ^ cs);
+	return ((aa.box->operator[](i) < bb.box->operator[](i)) ^ cs);
 }
 
 bool operator>(big_integer const &a, big_integer const &b) {
@@ -538,7 +490,7 @@ Vector trim_to_base(Vector const &vc, const ui64 to_base) {
 std::string to_string(big_integer const &a) {
 	std::string s = "";
 	big_integer b(a);
-	if (b.box->v.back()) {
+	if (b.box->back()) {
 		s = "-";
 		b = -b;
 	}
@@ -547,9 +499,9 @@ std::string to_string(big_integer const &a) {
 	const int base_digits = 4;
 	Vector sum, pow;
 
-	sum.push_back(b.box->v[0]);
+	sum.push_back(b.box->operator[](0));
 	pow.push_back(1);
-	for (size_t j = 1; j < b.box->v.size() - 1; ++j) {
+	for (size_t j = 1; j < b.box->size() - 1; ++j) {
 		for (size_t i = 0; i < pow.size(); ++i) {
 			pow[i] *= big_integer::base;
 		}	
@@ -557,7 +509,7 @@ std::string to_string(big_integer const &a) {
 		
 		Vector mul(pow.size());
 		for (size_t i = 0; i < mul.size(); ++i) {
-			mul[i] = pow[i] * b.box->v[j];
+			mul[i] = pow[i] * b.box->operator[](j);
 		}
 		mul = trim_to_base(mul, local_base);
 

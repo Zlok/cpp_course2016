@@ -10,9 +10,11 @@ struct big_integer {
     static const ui64 base = ((std::numeric_limits<unsigned long long>::max()) >> 32) + 1; //2^32
     static const ui64 neg_sign = base - 1;
 
-    struct copy_on_write {
+/*    struct copy_on_write {
         Vector v;
         int cnt;
+        ~copy_on_write() {
+        }
     };
 
     void delete_copy() {
@@ -23,16 +25,18 @@ struct big_integer {
             }
         }
     }
+*/
 
     big_integer(big_integer const &other);
     big_integer(ui64 a);
     big_integer(int a = 0);
     explicit big_integer(std::string const &s);
 
-    void make_new();
+//    void make_new();
 
     ~big_integer() {
-        delete_copy();
+        if (box != NULL)
+            box = NULL;
     }
 
     big_integer& operator=(big_integer const &rhs);
@@ -86,7 +90,7 @@ struct big_integer {
     friend std::string to_string(big_integer const &a);
 
 private:
-    copy_on_write *box;
+    std::shared_ptr<Vector> box;
 };
 
 #endif
